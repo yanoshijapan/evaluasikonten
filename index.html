@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Evaluasi Konten</title>
+    <!-- Google Fonts: Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tesseract.js -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <style>
+        :root {
+            --primary: #cc0000;
+            --primary-hover: #b30000;
+            --accent: #ffcc00;
+            --accent-hover: #e6b800;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #2c3e50;
+            --text-muted: #7f8c8d;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            overflow-wrap: break-word; /* Mencegah layar bergeser di HP */
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px 10px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: auto;
+            background: var(--card-bg);
+            padding: 30px 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06);
+        }
+
+        h1 { color: var(--primary); text-align: center; font-weight: 700; font-size: 26px; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: var(--text-muted); font-size: 14px; margin-bottom: 30px; font-weight: 500; }
+        h2, h3 { color: var(--primary); font-weight: 600; }
+
+        /* Insight Card Styling */
+        .insight-card {
+            border: 1px solid #e1e5eb;
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 25px;
+            background: #fafbfc;
+            position: relative;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .insight-card:hover { box-shadow: 0 5px 20px rgba(0,0,0,0.05); transform: translateY(-2px); }
+        .insight-card h3 { margin-top: 0; border-bottom: 2px solid var(--accent); padding-bottom: 8px; display: inline-block; font-size: 18px;}
+
+        /* Form Inputs */
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: var(--text-main);}
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 12px 15px; border: 1px solid #d1d8e0; 
+            border-radius: 8px; font-size: 14px; background-color: #fff;
+            transition: all 0.3s ease;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(204, 0, 0, 0.1);
+        }
+        .form-group textarea { resize: vertical; height: 90px; }
+        input[type="file"] { padding: 10px; background: #f8f9fa; border: 1px dashed #ced4da; cursor: pointer; color: var(--text-muted); }
+
+        .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; }
+        img.preview-img { max-width: 100%; border-radius: 8px; margin-top: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: none; }
+
+        /* Buttons Modernization */
+        button {
+            padding: 14px 20px; font-weight: 600; cursor: pointer; border: none; 
+            border-radius: 8px; transition: all 0.2s; font-size: 14px;
+        }
+        button:active { transform: scale(0.97); }
+
+        .btn-add { background-color: var(--accent); color: var(--text-main); width: 100%; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(255, 204, 0, 0.2);}
+        .btn-add:hover { background-color: var(--accent-hover); }
+
+        .btn-delete { background-color: #fff0f0; color: var(--primary); position: absolute; right: 25px; top: 25px; padding: 6px 12px; font-size: 12px; border: 1px solid #ffd6d6;}
+        .btn-delete:hover { background-color: var(--primary); color: white; }
+
+        .btn-sheet { background-color: #34495e; color: white; width: 100%; }
+        .btn-sheet:hover { background-color: #2c3e50; }
+
+        .btn-rekap { background-color: var(--primary); color: white; width: 100%; font-size: 15px; box-shadow: 0 4px 15px rgba(204, 0, 0, 0.25);}
+        .btn-rekap:hover { background-color: var(--primary-hover); }
+
+        .btn-clear-history { background-color: transparent; color: var(--primary); border: 2px solid var(--primary); width: 100%; margin-top: 15px;}
+        .btn-clear-history:hover { background-color: var(--primary); color: white; }
+
+        /* Action Layout */
+        .action-buttons {
+            display: grid; grid-template-columns: 1fr 2fr; gap: 15px; margin-top: 30px;
+            background: #fff8f8; padding: 20px; border-radius: var(--border-radius); border: 1px dashed #ffcccc;
+        }
+        @media (max-width: 600px) { .action-buttons { grid-template-columns: 1fr; } }
+
+        #current-sheet-display {
+            text-align: center; font-weight: 700; color: var(--primary);
+            background: #fffdf5; padding: 12px; border-radius: 8px; margin-top: 15px; border: 1px solid #fae5b6; font-size: 14px;
+        }
+
+        /* Loading Popup Dinamis */
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.92); z-index: 1000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            visibility: hidden; opacity: 0; transition: opacity 0.3s ease; backdrop-filter: blur(4px);
+        }
+        #loading-screen.active { visibility: visible; opacity: 1; }
+        .spinner {
+            border: 4px solid rgba(204, 0, 0, 0.1); border-top: 4px solid var(--primary);
+            border-radius: 50%; width: 55px; height: 55px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #loading-text { font-weight: 600; color: var(--text-main); margin-top: 20px; font-size: 16px; }
+
+        /* History Section */
+        #history-section { margin-top: 50px; border-top: 2px dashed #eee; padding-top: 30px; }
+        .history-folder {
+            background: var(--text-main); color: white; padding: 15px 20px;
+            border-radius: 8px; margin-bottom: 10px; cursor: pointer; font-weight: 600;
+            display: flex; justify-content: space-between; transition: background 0.2s;
+        }
+        .history-folder:hover { background: #1a252f; }
+        .history-content {
+            display: none; padding: 20px; background: #fff; border: 1px solid #eee;
+            border-radius: 8px; margin-top: -5px; margin-bottom: 20px; box-shadow: inset 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .history-item { border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px; font-size: 13px;}
+        .history-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .tag { background: #f1f4f8; padding: 4px 8px; border-radius: 4px; font-weight: 600; color: var(--text-main); display: inline-block; margin-right: 5px; margin-bottom: 5px;}
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <div class="spinner"></div>
+        <div id="loading-text">Memproses...</div>
+    </div>
+
+    <div class="container">
+        <h1>Dashboard Evaluasi Konten</h1>
+        <div class="subtitle">Sistem Perekaman Data Otomatis & Terpusat</div>
+        
+        <div id="insights-container"></div>
+
+        <button class="btn-add" onclick="addInsightCard()">+ Tambah Form Insight</button>
+
+        <div class="action-buttons">
+            <button class="btn-sheet" onclick="setSheetName()">📁 Buat Sheet Target</button>
+            <button class="btn-rekap" onclick="rekapData()">🚀 Rekap Semua Ke Google Sheet</button>
+        </div>
+        <div id="current-sheet-display">Sheet Belum Diatur</div>
+
+        <section id="history-section">
+            <h2>Riwayat Rekap Tersimpan</h2>
+            <div id="history-list"></div>
+            <!-- Fitur Baru: Tombol Hapus Seluruh Riwayat -->
+            <button class="btn-clear-history" onclick="clearAllHistory()">🗑️ Hapus Seluruh Riwayat Tersimpan</button>
+        </section>
+    </div>
+
+    <script>
+        // MASUKKAN KEMBALI URL WEB APP ANDA DI BAWAH INI:
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTdTFJNonnVxaOuW5EeDtdX9WjKPtAn0p7thxYZ5NVkFG8yVAPGGl8fMGd94ihF7nJTQ/exec';
+        
+        let insightsData = JSON.parse(localStorage.getItem('draftInsights')) || [];
+        let activeSheetName = localStorage.getItem('activeSheetName') || "";
+        let historyData = JSON.parse(localStorage.getItem('dashboardHistory')) || {};
+
+        document.getElementById('current-sheet-display').innerText = activeSheetName ? `Target Sheet: ${activeSheetName}` : '⚠️ Pilih atau Buat Sheet Target Terlebih Dahulu';
+
+        if(insightsData.length === 0) addInsightCard();
+        else renderInsights();
+        renderHistory();
+
+        function showLoading(text) {
+            document.getElementById('loading-text').innerText = text;
+            document.getElementById('loading-screen').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-screen').classList.remove('active');
+        }
+
+        function saveToLocal() {
+            localStorage.setItem('draftInsights', JSON.stringify(insightsData));
+        }
+
+        function addInsightCard() {
+            let id = Date.now().toString();
+            insightsData.push({
+                id: id, tanggal: '', foto: '', tayangan: '', pemirsa: '', 
+                waktu: '', like: '', komentar: '', repost: '', share: '', save: '', script: ''
+            });
+            saveToLocal();
+            renderInsights();
+        }
+
+        function removeInsightCard(id) {
+            insightsData = insightsData.filter(item => item.id !== id);
+            saveToLocal();
+            renderInsights();
+        }
+
+        function updateData(id, field, value) {
+            let index = insightsData.findIndex(item => item.id === id);
+            if(index > -1) {
+                insightsData[index][field] = value;
+                saveToLocal();
+            }
+        }
+
+        // Tesseract OCR Logic yang sudah disempurnakan (Line-by-Line & Regex Koma)
+        async function handleImageUpload(inputEl, id) {
+            let file = inputEl.files[0];
+            if(!file) return;
+
+            let reader = new FileReader();
+            reader.onload = async function(e) {
+                let base64 = e.target.result;
+                updateData(id, 'foto', base64);
+                
+                let previewImg = document.getElementById('preview-' + id);
+                previewImg.src = base64;
+                previewImg.style.display = 'block';
+
+                showLoading('Memindai Angka (OCR)...');
+                try {
+                    const worker = await Tesseract.createWorker('ind');
+                    const ret = await worker.recognize(file);
+                    await worker.terminate();
+
+                    let autoFill = { tayangan: '', pemirsa: '', waktu: '', like: '', komentar: '', repost: '', share: '', save: '' };
+
+                    const keywordMap = {
+                        'tayangan': 'tayangan', 'views': 'tayangan',
+                        'pemirsa': 'pemirsa', 'jangkauan': 'pemirsa', 'reach': 'pemirsa',
+                        'waktu menonton': 'waktu', 'watch time': 'waktu',
+                        'suka': 'like', 'likes': 'like',
+                        'komentar': 'komentar', 'comments': 'komentar',
+                        'posting ulang': 'repost', 'reposts': 'repost',
+                        'dibagikan': 'share', 'shares': 'share',
+                        'disimpan': 'save', 'saves': 'save'
+                    };
+
+                    const lines = ret.data.lines.map(l => l.text.toLowerCase());
+
+                    for (let i = 0; i < lines.length; i++) {
+                        let line = lines[i];
+                        let foundKeys = [];
+                        
+                        Object.keys(keywordMap).forEach(key => {
+                            if (line.includes(key)) foundKeys.push({ key: key, index: line.indexOf(key) });
+                        });
+
+                        if (foundKeys.length > 0) {
+                            foundKeys.sort((a, b) => a.index - b.index);
+                            let values = [];
+                            let j = 1;
+                            
+                            while (i + j < lines.length && j <= 2) {
+                                let nextLine = lines[i + j];
+                                values = nextLine.match(/(\d+(?:[\.,]\d+)?\s*(?:rb|jt|k|m)?)/g) || [];
+                                if (values.length > 0) break;
+                                j++;
+                            }
+
+                            foundKeys.forEach((item, idx) => {
+                                if (values[idx]) {
+                                    let val = values[idx].trim();
+                                    let num = val.replace(/\s/g, ''); 
+                                    
+                                    if (num.includes('rb') || num.includes('k')) {
+                                        let parseNum = parseFloat(num.replace(',', '.').replace(/[^\d\.]/g, ''));
+                                        num = (parseNum * 1000).toString();
+                                    } else if (num.includes('jt') || num.includes('m')) {
+                                        let parseNum = parseFloat(num.replace(',', '.').replace(/[^\d\.]/g, ''));
+                                        num = (parseNum * 1000000).toString();
+                                    } else {
+                                        num = num.replace(/[^\d\,]/g, ''); 
+                                    }
+                                    autoFill[keywordMap[item.key]] = num;
+                                }
+                            });
+                        }
+                    }
+
+                    Object.keys(autoFill).forEach(key => {
+                        if(autoFill[key] !== '') {
+                            let inputEl = document.getElementById(`${key}-${id}`);
+                            if(inputEl) {
+                                inputEl.value = autoFill[key];
+                                updateData(id, key, autoFill[key]);
+                            }
+                        }
+                    });
+                    
+                    hideLoading();
+                } catch (err) {
+                    hideLoading();
+                    alert("Gagal membaca gambar secara otomatis. Silakan isi angka secara manual.");
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function renderInsights() {
+            const container = document.getElementById('insights-container');
+            container.innerHTML = '';
+
+            insightsData.forEach((item, index) => {
+                let card = document.createElement('div');
+                card.className = 'insight-card';
+                card.innerHTML = `
+                    <button class="btn-delete" onclick="removeInsightCard('${item.id}')">✖ Hapus</button>
+                    <h3>Form Insight #${index + 1}</h3>
+                    
+                    <div class="grid-3">
+                        <div class="form-group">
+                            <label>📅 Tanggal Insight</label>
+                            <input type="date" value="${item.tanggal}" onchange="updateData('${item.id}', 'tanggal', this.value)">
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>📸 Upload Foto Bukti (Auto-Fill)</label>
+                            <input type="file" accept="image/*" onchange="handleImageUpload(this, '${item.id}')">
+                        </div>
+                    </div>
+                    <img id="preview-${item.id}" class="preview-img" src="${item.foto}" style="display: ${item.foto ? 'block' : 'none'}">
+                    
+                    <div class="grid-3" style="margin-top:20px;">
+                        <div class="form-group"><label>👁️ Tayangan</label><input type="text" id="tayangan-${item.id}" value="${item.tayangan}" onchange="updateData('${item.id}', 'tayangan', this.value)"></div>
+                        <div class="form-group"><label>👥 Pemirsa</label><input type="text" id="pemirsa-${item.id}" value="${item.pemirsa}" onchange="updateData('${item.id}', 'pemirsa', this.value)"></div>
+                        <div class="form-group"><label>⏱️ Waktu Nonton</label><input type="text" id="waktu-${item.id}" value="${item.waktu}" onchange="updateData('${item.id}', 'waktu', this.value)"></div>
+                        <div class="form-group"><label>❤️ Like</label><input type="text" id="like-${item.id}" value="${item.like}" onchange="updateData('${item.id}', 'like', this.value)"></div>
+                        <div class="form-group"><label>💬 Komentar</label><input type="text" id="komentar-${item.id}" value="${item.komentar}" onchange="updateData('${item.id}', 'komentar', this.value)"></div>
+                        <div class="form-group"><label>🔁 Repost</label><input type="text" id="repost-${item.id}" value="${item.repost}" onchange="updateData('${item.id}', 'repost', this.value)"></div>
+                        <div class="form-group"><label>📤 Share</label><input type="text" id="share-${item.id}" value="${item.share}" onchange="updateData('${item.id}', 'share', this.value)"></div>
+                        <div class="form-group"><label>💾 Save</label><input type="text" id="save-${item.id}" value="${item.save}" onchange="updateData('${item.id}', 'save', this.value)"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>📝 Naskah Script</label>
+                        <textarea placeholder="Tuliskan script konten di sini..." onchange="updateData('${item.id}', 'script', this.value)">${item.script}</textarea>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function setSheetName() {
+            let name = prompt("Masukkan Nama Sheet untuk menampung rekapan:", activeSheetName);
+            if(name) {
+                activeSheetName = name;
+                localStorage.setItem('activeSheetName', activeSheetName);
+                document.getElementById('current-sheet-display').innerText = `Target Sheet: ${activeSheetName}`;
+            }
+        }
+
+        async function rekapData() {
+            if(!activeSheetName) { alert("Silakan klik 'Buat Sheet Target' terlebih dahulu!"); return; }
+            if(insightsData.length === 0) { alert("Form insight kosong."); return; }
+
+            showLoading('Mengirim data ke Google Sheets...');
+            let payload = { action: 'rekap', sheetName: activeSheetName, insights: insightsData };
+
+            try {
+                let response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                let result = await response.json();
+
+                if(result.status === 'success') {
+                    if(!historyData[activeSheetName]) historyData[activeSheetName] = [];
+                    historyData[activeSheetName].push(...insightsData);
+                    localStorage.setItem('dashboardHistory', JSON.stringify(historyData));
+
+                    insightsData = [];
+                    saveToLocal();
+                    addInsightCard();
+                    renderHistory();
+
+                    hideLoading();
+                    alert("Berhasil! Data telah tersusun rapi di Google Sheet.");
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (err) {
+                hideLoading();
+                alert("Pengiriman gagal. Pastikan URL Web App tepat. Error: " + err);
+            }
+        }
+
+        function renderHistory() {
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+
+            if(Object.keys(historyData).length === 0) {
+                historyList.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Belum ada data yang direkap ke Sheet.</p>';
+                return;
+            }
+
+            Object.keys(historyData).forEach(sheet => {
+                let folder = document.createElement('div');
+                folder.className = 'history-folder';
+                folder.innerHTML = `<span>📁 Sheet: ${sheet}</span> <span>${historyData[sheet].length} Data</span>`;
+                folder.onclick = function() {
+                    let content = this.nextElementSibling;
+                    content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                };
+
+                let content = document.createElement('div');
+                content.className = 'history-content';
+                
+                historyData[sheet].forEach((item) => {
+                    content.innerHTML += `
+                        <div class="history-item">
+                            <span class="tag">📅 ${item.tanggal || 'Tanpa Tanggal'}</span>
+                            <span class="tag">👁️ ${item.tayangan || 0}</span>
+                            <span class="tag">❤️ ${item.like || 0}</span>
+                            <div style="margin-top: 8px; color: #555;"><em>" ${item.script.substring(0, 80) || 'Tidak ada script'}... "</em></div>
+                        </div>
+                    `;
+                });
+
+                historyList.appendChild(folder);
+                historyList.appendChild(content);
+            });
+        }
+
+        // FITUR BARU: Menghapus memori riwayat
+        function clearAllHistory() {
+            if(Object.keys(historyData).length === 0) {
+                alert("Riwayat sudah kosong.");
+                return;
+            }
+            let konfirmasi = confirm("Apakah Anda yakin ingin menghapus SELURUH riwayat rekap dari perangkat ini?\n\n(Catatan: Data yang sudah terkirim ke Google Sheet TIDAK akan ikut terhapus, ini hanya membersihkan memori perangkat).");
+            
+            if (konfirmasi) {
+                historyData = {};
+                localStorage.removeItem('dashboardHistory');
+                renderHistory();
+                alert("Riwayat pada perangkat berhasil dibersihkan.");
+            }
+        }
+    </script>
+</body>
+</html>
